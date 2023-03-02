@@ -10,7 +10,6 @@ pub fn about() -> String {
 pub struct ShellCommand {
     stdin: Option<String>,
     argv: Vec<String>,
-    output: Option<Result<String, String>>,
 }
 
 impl ShellCommand {
@@ -18,7 +17,6 @@ impl ShellCommand {
         ShellCommand {
             stdin: None,
             argv: vec![arg0.into()],
-            output: None,
         }
     }
 
@@ -35,7 +33,6 @@ impl ShellCommand {
         ShellCommand {
             stdin: self.stdin.clone(),
             argv,
-            output: self.output.clone(),
         }
     }
 
@@ -43,8 +40,53 @@ impl ShellCommand {
         ShellCommand {
             stdin: Some(input.into()),
             argv: self.argv,
-            output: self.output,
         }
+    }
+
+    pub fn pipe_stdout(self, scmd: Self) -> Result<Self, String> {
+        let scmd_output = match scmd.run() {
+            Ok(s) => s,
+            Err(s) => return Err(s),
+        };
+        Ok(self.pipe_string(scmd_output))
+    }
+
+    pub fn run(&self) -> Result<String, String> {
+        let cmd_arg0 = &self.argv[0];
+        let mut cmd = Command::new(cmd_arg0);
+        if let Some(s) = &self.stdin {
+            let printf = Command::new("printf")
+                .arg(s)
+                .stdout(Stdio::piped())
+                .spawn()
+                .expect("Failed to spawn child process; printf required!")
+                .stdout
+                .expect("stdout read failed");
+
+            cmd.args(&self.argv[1..])
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .stdin(printf)
+        } else {
+            cmd.stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+        };
+
+        let output = cmd.spawn();
+        let output = output
+            .expect("Failed to spawn child process")
+            .wait_with_output()
+            .expect("Faled to execute child process");
+
+        if !output.status.success() {
+            let stde =
+                String::from_utf8(output.stderr).expect("Could not format stderr into utf-8");
+            return Err(stde);
+        }
+
+        Ok(String::from_utf8(output.stdout).expect("Could not format stdout into utf-8"))
     }
 
     pub fn command(&self) -> &String {
