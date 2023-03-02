@@ -11,3 +11,25 @@ pub struct ShellCommand {
     stdin: Option<Stdio>,
     args: Vec<String>,
 }
+
+pub struct CommandResult {
+    output: Result<String, String>,
+}
+
+impl ShellCommand {
+    pub fn new(arg0: impl Into<String> + Copy) -> ShellCommand {
+        let mut cmd = Command::new(arg0.into());
+        cmd.stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        ShellCommand {
+            cmd,
+            stdin: None,
+            args: vec![arg0.into()],
+        }
+    }
+
+    fn command(&self) -> &String {
+        &self.args[0]
+    }
+}
