@@ -22,7 +22,7 @@ impl ShellCommand {
         }
     }
 
-    pub fn args<I, S>(&self, args: I) -> ShellCommand
+    pub fn args<I, S>(&self, args: I) -> Self
     where
         I: IntoIterator<Item = S>,
         S: std::fmt::Display,
@@ -36,6 +36,14 @@ impl ShellCommand {
             stdin: self.stdin.clone(),
             argv,
             output: self.output.clone(),
+        }
+    }
+
+    pub fn pipe_string(self, input: impl Into<String>) -> Self {
+        ShellCommand {
+            stdin: Some(input.into()),
+            argv: self.argv,
+            output: self.output,
         }
     }
 
