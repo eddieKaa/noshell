@@ -25,7 +25,8 @@ impl ShellCommand {
         I: IntoIterator<Item = S>,
         S: std::fmt::Display,
     {
-        let arg_addition: Vec<String> = args.into_iter().map(|s| s.to_string()).collect();
+        let str_fi = |s: S| s.to_string();
+        let arg_addition: Vec<String> = args.into_iter().map(str_fi).collect();
 
         let mut argv = self.argv.clone();
         argv.extend(arg_addition);
@@ -55,19 +56,11 @@ impl ShellCommand {
         let cmd_arg0 = &self.argv[0];
         let mut cmd = Command::new(cmd_arg0);
         if let Some(s) = &self.stdin {
-            let printf = Command::new("printf")
-                .arg(s)
-                .stdout(Stdio::piped())
-                .spawn()
-                .expect("Failed to spawn child process; printf required!")
-                .stdout
-                .expect("stdout read failed");
-
             cmd.args(&self.argv[1..])
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
-                .stdin(printf)
+                .stdin(string_to_stdio(s))
         } else {
             cmd.stdin(Stdio::piped())
                 .stdout(Stdio::piped())
@@ -75,18 +68,14 @@ impl ShellCommand {
         };
 
         let output = cmd.spawn();
-        let output = output
-            .expect("Failed to spawn child process")
-            .wait_with_output()
-            .expect("Faled to execute child process");
+        let output = output.expect(EXP_SP).wait_with_output().expect(EXP_EXE);
 
         if !output.status.success() {
-            let stde =
-                String::from_utf8(output.stderr).expect("Could not format stderr into utf-8");
+            let stde = String::from_utf8(output.stderr).expect(EXP_SERR);
             return Err(stde);
         }
 
-        Ok(String::from_utf8(output.stdout).expect("Could not format stdout into utf-8"))
+        Ok(String::from_utf8(output.stdout).expect(EXP_SOUT))
     }
 
     pub fn command(&self) -> &String {
@@ -94,4 +83,19 @@ impl ShellCommand {
     }
 }
 
+fn string_to_stdio(s: impl Into<String>) -> Stdio {
+    Command::new("printf")
+        .arg(s.into())
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("Failed to spawn child process; printf required!")
+        .stdout
+        .expect("stdout read failed")
+        .into()
+}
+
+static EXP_SOUT: &str = "Could not format stdout into utf-8";
+static EXP_SERR: &str = "Could not format stderr into utf-8";
+static EXP_SP: &str = "Failed to spawn child process";
+static EXP_EXE: &str = "Faled to execute child process";
 mod tests;
