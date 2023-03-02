@@ -6,30 +6,42 @@ pub fn about() -> String {
     format!("{}\n{}", str1, str2)
 }
 
+#[derive(Debug, PartialEq)]
 pub struct ShellCommand {
-    cmd: Command,
-    stdin: Option<Stdio>,
-    args: Vec<String>,
-}
-
-pub struct CommandResult {
-    output: Result<String, String>,
+    stdin: Option<String>,
+    argv: Vec<String>,
+    output: Option<Result<String, String>>,
 }
 
 impl ShellCommand {
     pub fn new(arg0: impl Into<String> + Copy) -> ShellCommand {
-        let mut cmd = Command::new(arg0.into());
-        cmd.stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
         ShellCommand {
-            cmd,
             stdin: None,
-            args: vec![arg0.into()],
+            argv: vec![arg0.into()],
+            output: None,
         }
     }
 
-    fn command(&self) -> &String {
-        &self.args[0]
+    pub fn args<I, S>(&self, args: I) -> ShellCommand
+    where
+        I: IntoIterator<Item = S>,
+        S: std::fmt::Display,
+    {
+        let arg_addition: Vec<String> = args.into_iter().map(|s| s.to_string()).collect();
+
+        let mut argv = self.argv.clone();
+        argv.extend(arg_addition);
+
+        ShellCommand {
+            stdin: self.stdin.clone(),
+            argv,
+            output: self.output.clone(),
+        }
+    }
+
+    pub fn command(&self) -> &String {
+        &self.argv[0]
     }
 }
+
+mod tests;
