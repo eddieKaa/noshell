@@ -1,9 +1,9 @@
 use std::process::{Command, Stdio};
 
 pub fn about() -> String {
-    let str1 = "NoShell is a simple wrapper for std::process::Command;";
-    let str2 = "For using rust as a replacement for shell scripting language.";
-    format!("{}\n{}", str1, str2)
+    let ab1 = "NoShell is a simple wrapper for std::process::Command;";
+    let ab2 = "For using rust as a replacement for a shell scripting language.";
+    format!("{}\n{}", ab1, ab2)
 }
 
 #[derive(Debug, PartialEq)]
