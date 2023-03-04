@@ -62,7 +62,8 @@ impl ShellCommand {
                 .stderr(Stdio::piped())
                 .stdin(string_to_stdio(s))
         } else {
-            cmd.stdin(Stdio::piped())
+            cmd.args(&self.argv[1..])
+                .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
         };
